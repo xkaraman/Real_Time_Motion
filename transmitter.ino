@@ -6,6 +6,7 @@ int msg[1] = {1};
 int rec[1] = {5};
 bool stat = true;
 RF24 radio(7,8);
+unsigned long time;
 const uint64_t pipe[1] = {0xF0F0F0F0E1LL};
  
 void setup()
@@ -20,38 +21,43 @@ void setup()
   radio.setRetries(15,15);
  }
 
+typedef struct {
+  int x;
+  int y;
+  } positions;
+
+positions pos;
+
  
 void loop()
 {
   if(stat)
   {
     radio.stopListening();
-    if(radio.write(msg,sizeof(msg)))
-    {
-      Serial.print( msg[0] );
+    
+    pos.x=analogRead(A7);
+    pos.y=analogRead(A6);
+    
+    Serial.println("X= "+ String(pos.x) + " Y= "+ String(pos.y) );
+    time=millis();
+    
+    if( radio.write(&pos,sizeof(pos) ) ){
+      //Serial.print( msg[0] );
       Serial.println("  transmitted successfully !!");
-
-      if(radio.isAckPayloadAvailable())
-      {
-        radio.read(rec,sizeof(rec));
+      if(radio.isAckPayloadAvailable()){
+       radio.read(&pos,sizeof(pos));
        Serial.print("received ack payload is : ");
-        Serial.println(rec[0]);
+       Serial.println("X= "+ String(pos.x) + " Y= "+ String(pos.y) );
+      //analogWrite(A2,pos.x);
       }
-      else
-      {
-        stat = false; //doing this completely shuts down the transmitter if an ack payload is not received !!
-        Serial.println("status has become false so stop here....");
-      }
-      
-      msg[0]+=3;;
-    if(msg[0]>=100)
-      {msg[0]=1;}
     }
-    else
-      {
+    else {
         Serial.println("failed tx...");
       }
+      
+    time=millis()-time;
+    Serial.println("Time needed is " + String(time) +  " ms");
   }
 
-  delay(100);
+  //delay(10);
 }
